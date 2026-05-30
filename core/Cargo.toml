@@ -1,0 +1,14 @@
+[package]
+name = "core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+name = "core"
+
+[dependencies]
+uniffi = "0.31"
+rusqlite = { version = "0.40", features = ["bundled"] }
+thiserror = "2.0"
+uuid = { version = "1.23    ", features = ["v4"] }
