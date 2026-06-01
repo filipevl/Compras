@@ -1,4 +1,6 @@
-# Rust
+# Core
 target
 core/.idea
+
+# Root
 .idea
