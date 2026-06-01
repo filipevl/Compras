@@ -1,11 +1,11 @@
 uniffi::setup_scaffolding!();
 
-mod errors;
 mod category;
-mod quantity;
+mod shared;
 mod product;
+mod quantity;
 
-use crate::errors::InitError;
+use crate::shared::InitError;
 use rusqlite::Connection;
 use std::sync::{Arc, Mutex};
 use uniffi::deps::anyhow;
@@ -27,12 +27,17 @@ pub struct ComprasCore {
 impl ComprasCore {
     #[uniffi::constructor]
     pub fn init(db_path: String) -> Result<Arc<Self>, InitError> {
-        // Map the file opening issue to its exact variant
         let mut conn = Connection::open(&db_path).map_err(|e| InitError::DatabaseOpenFailed {
             message: e.to_string(),
         })?;
 
-        // Map the migration issue to its exact variant
+        // SQLite has foreign keys disabled by default, and the setting is on a connection level.
+        conn.execute("PRAGMA foreign_keys = ON;", []).map_err(|e| {
+            InitError::DatabaseOpenFailed {
+                message: e.to_string(),
+            }
+        })?;
+
         Self::run_migrations(&mut conn).map_err(|e| InitError::MigrationFailed {
             message: e.to_string(),
         })?;

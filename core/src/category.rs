@@ -1,4 +1,5 @@
 pub mod model;
-pub mod database;
+pub mod api;
+pub mod errors;
 
 pub use model::Category;
