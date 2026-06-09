@@ -1,14 +1,19 @@
 [package]
-name = "core"
+name = "compras"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
-name = "core"
+name = "compras_core"
+
+[[bin]]
+name = "uniffi_bindgen"
+path = "src/bin/uniffi_bindgen.rs"
 
 [dependencies]
-uniffi = "0.31"
-rusqlite = { version = "0.40", features = ["bundled"] }
+uniffi = { version = "0.31", features = ["cli"] }
+rusqlite = { version = "0.40", features = ["bundled", "uuid"] }
 thiserror = "2.0"
-uuid = { version = "1.23    ", features = ["v4"] }
+uuid = { version = "1.23", features = ["v4"] }
+chrono = { version = "0.4", features = ["std"] }

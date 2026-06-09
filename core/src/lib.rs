@@ -4,6 +4,7 @@ mod category;
 mod shared;
 mod product;
 mod quantity;
+mod actions;
 
 use crate::shared::InitError;
 use rusqlite::Connection;
