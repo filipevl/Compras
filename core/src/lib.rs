@@ -7,6 +7,7 @@ mod error;
 use crate::error::CoreError;
 use rusqlite::Connection;
 use std::sync::{Arc, Mutex, MutexGuard};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(uniffi::Object)]
 pub struct ComprasCore {
@@ -60,4 +61,11 @@ impl ComprasCore {
 
         Ok(())
     }
+}
+
+fn now() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("The system clock is set before 1970")
+        .as_millis() as i64
 }
