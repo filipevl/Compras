@@ -1,55 +1,46 @@
 uniffi::setup_scaffolding!();
 
-mod category;
-mod shared;
-mod product;
-mod product_state;
 mod actions;
+mod category;
+mod error;
 
-use crate::shared::InitError;
+use crate::error::CoreError;
 use rusqlite::Connection;
-use std::sync::{Arc, Mutex};
-use uniffi::deps::anyhow;
-use uuid::Uuid;
-
-// Map UUIDs to Strings in uniffi
-uniffi::custom_type!(Uuid, String, {
-    remote,
-    try_lift: |val| Uuid::parse_str(&val).map_err(|e| anyhow::anyhow!(e)),
-    lower: |obj| obj.to_string(),
-});
+use std::sync::{Arc, Mutex, MutexGuard};
 
 #[derive(uniffi::Object)]
 pub struct ComprasCore {
-    pub(crate) db: Arc<Mutex<Connection>>,
+    connection: Mutex<Connection>,
 }
 
 #[uniffi::export]
 impl ComprasCore {
     #[uniffi::constructor]
-    pub fn init(db_path: String) -> Result<Arc<Self>, InitError> {
-        let mut conn = Connection::open(&db_path).map_err(|e| InitError::DatabaseOpenFailed {
-            error_message: e.to_string(),
-        })?;
+    pub fn init(db_path: String) -> Result<Arc<Self>, CoreError> {
+        let mut conn = Connection::open(&db_path)?;
 
         // SQLite has foreign keys disabled by default, and the setting is on a connection level.
-        conn.execute("PRAGMA foreign_keys = ON;", []).map_err(|e| {
-            InitError::DatabaseOpenFailed {
-                error_message: e.to_string(),
-            }
-        })?;
+        conn.execute("PRAGMA foreign_keys = ON;", [])?;
 
-        Self::run_migrations(&mut conn).map_err(|e| InitError::MigrationFailed {
-            error_message: e.to_string(),
-        })?;
+        Self::run_migrations(&mut conn)?;
 
         Ok(Arc::new(Self {
-            db: Arc::new(Mutex::new(conn)),
+            connection: Mutex::new(conn),
         }))
     }
 }
 
 impl ComprasCore {
+
+    /// The database connection.
+    /// If code panicked while holding it, the mutex is "poisoned" but the connection itself is fine,
+    /// so carry on with it.
+    fn db(&self) -> MutexGuard<'_, Connection> {
+        self.connection
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
     fn run_migrations(conn: &mut Connection) -> rusqlite::Result<()> {
         let current_migration_version: i32 =
             conn.query_row("PRAGMA user_version", [], |row| row.get(0))?;

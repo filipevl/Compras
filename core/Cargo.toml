@@ -9,7 +9,6 @@ name = "compras_core"
 
 [dependencies]
 uniffi = "0.32"
-rusqlite = { version = "0.40", features = ["bundled", "uuid"] }
+rusqlite = { version = "0.43", features = ["bundled"] }
 thiserror = "2.0"
-uuid = { version = "1.23", features = ["v4"] }
-chrono = { version = "0.4", features = ["std"] }
+uuid = { version = "1.29", features = ["v4"] }

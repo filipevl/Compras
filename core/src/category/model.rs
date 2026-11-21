@@ -1,8 +1,6 @@
-use uuid::Uuid;
-
 #[derive(uniffi::Record, Debug, Clone)]
 pub struct Category {
-    pub id: Uuid,
+    pub id: String,
     pub name: String,
     pub color_hex: String,
 }
@@ -19,7 +17,7 @@ impl Category {
 
 #[derive(uniffi::Record, Debug, Clone)]
 pub struct CategorySummary {
-    pub id: Uuid,
+    pub id: String,
     pub name: String,
     pub color_hex: String,
     pub product_count: u32,
