@@ -10,8 +10,9 @@ impl ComprasCore {
         let conn = self.db();
 
         let mut statement = conn.prepare(
-            "SELECT id, name, color_hex \
-            FROM categories \
+            "SELECT id, name, color_hex
+            FROM categories
+            WHERE deleted_at IS NULL
             ORDER BY position",
         )?;
 
@@ -27,8 +28,10 @@ impl ComprasCore {
         let id = Uuid::new_v4().to_string();
 
         conn.execute(
-            "INSERT INTO categories (id, name, color_hex, position, created_at, updated_at)\
-            VALUES (?1, ?2, ?3, (SELECT COALESCE(MAX(position), 0) + 1 FROM categories), ?4, ?4)",
+            "INSERT INTO categories
+            (id, name, color_hex, position, created_at, updated_at)
+            VALUES
+            (?1, ?2, ?3, (SELECT COALESCE(MAX(position), 0) + 1 FROM categories), ?4, ?4)",
             rusqlite::params![id, name, color_hex, now()],
         )?;
 
@@ -48,7 +51,8 @@ impl ComprasCore {
         let conn = self.db();
 
         let changed = conn.execute(
-            "UPDATE categories SET name = ?1, color_hex = ?2, updated_at = ?3\
+            "UPDATE categories
+            SET name = ?1, color_hex = ?2, updated_at = ?3
             WHERE id = ?4 AND deleted_at IS NULL",
             rusqlite::params![name, color_hex, now(), id],
         )?;
@@ -70,8 +74,8 @@ impl ComprasCore {
         let conn = self.db();
 
         let changed = conn.execute(
-            "UPDATE categories \
-            SET deleted_at = ?1, updated_at = ?1 \
+            "UPDATE categories
+            SET deleted_at = ?1, updated_at = ?1
             WHERE id = ?2 AND deleted_at IS NULL",
             rusqlite::params![now(), id],
         )?;
@@ -89,7 +93,6 @@ mod tests {
     use crate::error::CoreError;
     use crate::ComprasCore;
     use std::sync::Arc;
-    use rusqlite::fallible_iterator::FallibleIterator;
     use crate::category::model::Category;
 
     /// A core on a fresh in-memory database, holding one category: "Bakery".
@@ -126,6 +129,19 @@ mod tests {
             .collect();
 
         assert_eq!(names, ["Bakery", "Frozen", "Drinks"]);
+    }
+
+    #[test]
+    fn update_changes_the_category() {
+        let (core, bakery) = core_with_bakery();
+
+        core.update_category(bakery.id.clone(), "Padaria".into(), "#A12345".into()).unwrap();
+        let categories = core.get_categories().unwrap();
+
+        assert_eq!(categories.len(), 1);
+        assert_eq!(categories[0].id, bakery.id);
+        assert_eq!(categories[0].name, "Padaria");
+        assert_eq!(categories[0].color_hex, "#A12345");
     }
 
     #[test]
