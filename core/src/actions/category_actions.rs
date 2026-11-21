@@ -73,11 +73,11 @@ impl ComprasCore {
 
         let changed = conn.execute(
             "UPDATE categories SET name = ?1, color_hex = ?2 WHERE id = ?3",
-            rusqlite::params![name, color_hex, id.to_string()],
+            rusqlite::params![name, color_hex, id],
         )?;
 
         if changed == 0 {
-            return Err(CoreError::NotFound)
+            return Err(CoreError::NotFound);
         }
 
         Ok(Category {
@@ -93,7 +93,7 @@ impl ComprasCore {
 
         let changed = conn.execute(
             "DELETE FROM categories WHERE id = ?1",
-            rusqlite::params![id.to_string()],
+            rusqlite::params![id],
         )?;
 
         if changed == 0 {
@@ -137,13 +137,14 @@ mod tests {
     #[test]
     fn update_changes_the_category() {
         let core = core_with_bakery();
-        core.update_category("c1".into(), "Padaria".into(), "#A12345".into())
-            .unwrap();
 
-        assert_eq!(core.get_categories().unwrap().len(), 1);
-        assert_eq!(core.get_categories().unwrap()[0].id, "c1");
-        assert_eq!(core.get_categories().unwrap()[0].name, "Padaria");
-        assert_eq!(core.get_categories().unwrap()[0].color_hex, "#A12345");
+        core.update_category("c1".into(), "Padaria".into(), "#A12345".into()).unwrap();
+        let categories = core.get_categories().unwrap();
+
+        assert_eq!(categories.len(), 1);
+        assert_eq!(categories[0].id, "c1");
+        assert_eq!(categories[0].name, "Padaria");
+        assert_eq!(categories[0].color_hex, "#A12345");
     }
 
     #[test]

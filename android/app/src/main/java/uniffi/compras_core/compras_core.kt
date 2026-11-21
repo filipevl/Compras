@@ -840,19 +840,19 @@ private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
 }
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
-    if ((lib.uniffi_compras_core_checksum_method_comprascore_delete_category() and 0xFFFF) != 59251) {
+    if ((lib.uniffi_compras_core_checksum_method_comprascore_delete_category() and 0xFFFF) != 26586) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_compras_core_checksum_method_comprascore_get_categories() and 0xFFFF) != 7258) {
+    if ((lib.uniffi_compras_core_checksum_method_comprascore_get_categories() and 0xFFFF) != 45113) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_compras_core_checksum_method_comprascore_get_categories_summary() and 0xFFFF) != 44528) {
+    if ((lib.uniffi_compras_core_checksum_method_comprascore_get_categories_summary() and 0xFFFF) != 17990) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_compras_core_checksum_method_comprascore_update_category() and 0xFFFF) != 43498) {
+    if ((lib.uniffi_compras_core_checksum_method_comprascore_update_category() and 0xFFFF) != 60153) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_compras_core_checksum_constructor_comprascore_init() and 0xFFFF) != 56508) {
+    if ((lib.uniffi_compras_core_checksum_constructor_comprascore_init() and 0xFFFF) != 7939) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -1038,29 +1038,6 @@ public object FfiConverterUInt: FfiConverter<UInt, Int> {
 /**
  * @suppress
  */
-public object FfiConverterBoolean: FfiConverter<Boolean, Byte> {
-    override fun lift(value: Byte): Boolean {
-        return value.toInt() != 0
-    }
-
-    override fun read(buf: ByteBuffer): Boolean {
-        return lift(buf.get())
-    }
-
-    override fun lower(value: Boolean): Byte {
-        return if (value) 1.toByte() else 0.toByte()
-    }
-
-    override fun allocationSize(value: Boolean) = 1UL
-
-    override fun write(value: Boolean, buf: ByteBuffer) {
-        buf.put(lower(value))
-    }
-}
-
-/**
- * @suppress
- */
 public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
     // Note: we don't inherit from FfiConverterRustBuffer, because we use a
     // special encoding when lowering/lifting.  We can use `RustBuffer.len` to
@@ -1112,49 +1089,6 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
         val byteBuf = toUtf8(value)
         buf.putInt(byteBuf.limit())
         buf.put(byteBuf)
-    }
-}
-
-
-/**
- * @suppress
- */
-public object FfiConverterTimestamp: FfiConverterRustBuffer<java.time.Instant> {
-    override fun read(buf: ByteBuffer): java.time.Instant {
-        val seconds = buf.getLong()
-        // Type mismatch (should be u32) but we check for overflow/underflow below
-        val nanoseconds = buf.getInt().toLong()
-        if (nanoseconds < 0) {
-            throw java.time.DateTimeException("Instant nanoseconds exceed minimum or maximum supported by uniffi")
-        }
-        if (seconds >= 0) {
-            return java.time.Instant.EPOCH.plus(java.time.Duration.ofSeconds(seconds, nanoseconds))
-        } else {
-            return java.time.Instant.EPOCH.minus(java.time.Duration.ofSeconds(-seconds, nanoseconds))
-        }
-    }
-
-    // 8 bytes for seconds, 4 bytes for nanoseconds
-    override fun allocationSize(value: java.time.Instant) = 12UL
-
-    override fun write(value: java.time.Instant, buf: ByteBuffer) {
-        var epochOffset = java.time.Duration.between(java.time.Instant.EPOCH, value)
-
-        var sign = 1
-        if (epochOffset.isNegative()) {
-            sign = -1
-            epochOffset = epochOffset.negated()
-        }
-
-        if (epochOffset.nano < 0) {
-            // Java docs provide guarantee that nano will always be positive, so this should be impossible
-            // See: https://docs.oracle.com/javase/8/docs/api/java/time/Instant.html
-            throw IllegalArgumentException("Invalid timestamp, nano value must be non-negative")
-        }
-
-        buf.putLong(sign * epochOffset.seconds)
-        // Type mismatch (should be u32) but since values will always be between 0 and 999,999,999 it should be OK
-        buf.putInt(epochOffset.nano)
     }
 }
 
@@ -1259,13 +1193,13 @@ public interface ComprasCoreInterface {
     /**
      * Associated products are automatically detached (category set to null) due to foreign key constraints
      */
-    fun `deleteCategory`(`id`: Uuid)
+    fun `deleteCategory`(`id`: kotlin.String)
     
     fun `getCategories`(): List<Category>
     
     fun `getCategoriesSummary`(`sort`: CategorySort?, `filter`: kotlin.String?): List<CategorySummary>
     
-    fun `updateCategory`(`id`: Uuid, `name`: kotlin.String, `colorHex`: kotlin.String): Category
+    fun `updateCategory`(`id`: kotlin.String, `name`: kotlin.String, `colorHex`: kotlin.String): Category
     
     companion object
 }
@@ -1375,24 +1309,24 @@ open class ComprasCore: Disposable, AutoCloseable, ComprasCoreInterface
     /**
      * Associated products are automatically detached (category set to null) due to foreign key constraints
      */
-    @Throws(CategoryException::class)override fun `deleteCategory`(`id`: Uuid)
+    @Throws(CoreException::class)override fun `deleteCategory`(`id`: kotlin.String)
         = 
     callWithHandle {
-    uniffiRustCallWithError(CategoryException) { _status ->
+    uniffiRustCallWithError(CoreException) { _status ->
     UniffiLib.uniffi_compras_core_fn_method_comprascore_delete_category(
         it,
         
-        FfiConverterTypeUuid.lower(`id`),_status)
+        FfiConverterString.lower(`id`),_status)
 }
     }
     
     
 
     
-    @Throws(CategoryException::class)override fun `getCategories`(): List<Category> {
+    @Throws(CoreException::class)override fun `getCategories`(): List<Category> {
             return FfiConverterSequenceTypeCategory.lift(
     callWithHandle {
-    uniffiRustCallWithError(CategoryException) { _status ->
+    uniffiRustCallWithError(CoreException) { _status ->
     UniffiLib.uniffi_compras_core_fn_method_comprascore_get_categories(
         it,
         _status)
@@ -1403,10 +1337,10 @@ open class ComprasCore: Disposable, AutoCloseable, ComprasCoreInterface
     
 
     
-    @Throws(CategoryException::class)override fun `getCategoriesSummary`(`sort`: CategorySort?, `filter`: kotlin.String?): List<CategorySummary> {
+    @Throws(CoreException::class)override fun `getCategoriesSummary`(`sort`: CategorySort?, `filter`: kotlin.String?): List<CategorySummary> {
             return FfiConverterSequenceTypeCategorySummary.lift(
     callWithHandle {
-    uniffiRustCallWithError(CategoryException) { _status ->
+    uniffiRustCallWithError(CoreException) { _status ->
     UniffiLib.uniffi_compras_core_fn_method_comprascore_get_categories_summary(
         it,
         
@@ -1419,14 +1353,14 @@ open class ComprasCore: Disposable, AutoCloseable, ComprasCoreInterface
     
 
     
-    @Throws(CategoryException::class)override fun `updateCategory`(`id`: Uuid, `name`: kotlin.String, `colorHex`: kotlin.String): Category {
+    @Throws(CoreException::class)override fun `updateCategory`(`id`: kotlin.String, `name`: kotlin.String, `colorHex`: kotlin.String): Category {
             return FfiConverterTypeCategory.lift(
     callWithHandle {
-    uniffiRustCallWithError(CategoryException) { _status ->
+    uniffiRustCallWithError(CoreException) { _status ->
     UniffiLib.uniffi_compras_core_fn_method_comprascore_update_category(
         it,
         
-        FfiConverterTypeUuid.lower(`id`),
+        FfiConverterString.lower(`id`),
         FfiConverterString.lower(`name`),
         FfiConverterString.lower(`colorHex`),_status)
 }
@@ -1443,9 +1377,9 @@ open class ComprasCore: Disposable, AutoCloseable, ComprasCoreInterface
     
     companion object {
         
-    @Throws(InitException::class) fun `init`(`dbPath`: kotlin.String): ComprasCore {
+    @Throws(CoreException::class) fun `init`(`dbPath`: kotlin.String): ComprasCore {
             return FfiConverterTypeComprasCore.lift(
-    uniffiRustCallWithError(InitException) { _status ->
+    uniffiRustCallWithError(CoreException) { _status ->
     UniffiLib.uniffi_compras_core_fn_constructor_comprascore_init(
     
         
@@ -1487,7 +1421,7 @@ public object FfiConverterTypeComprasCore: FfiConverter<ComprasCore, Long> {
 
 
 data class Category (
-    var `id`: Uuid
+    var `id`: kotlin.String
     , 
     var `name`: kotlin.String
     , 
@@ -1508,20 +1442,20 @@ data class Category (
 public object FfiConverterTypeCategory: FfiConverterRustBuffer<Category> {
     override fun read(buf: ByteBuffer): Category {
         return Category(
-            FfiConverterTypeUuid.read(buf),
+            FfiConverterString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
         )
     }
 
     override fun allocationSize(value: Category) = (
-            FfiConverterTypeUuid.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`id`) +
             FfiConverterString.allocationSize(value.`name`) +
             FfiConverterString.allocationSize(value.`colorHex`)
     )
 
     override fun write(value: Category, buf: ByteBuffer) {
-            FfiConverterTypeUuid.write(value.`id`, buf)
+            FfiConverterString.write(value.`id`, buf)
             FfiConverterString.write(value.`name`, buf)
             FfiConverterString.write(value.`colorHex`, buf)
     }
@@ -1530,7 +1464,7 @@ public object FfiConverterTypeCategory: FfiConverterRustBuffer<Category> {
 
 
 data class CategorySummary (
-    var `id`: Uuid
+    var `id`: kotlin.String
     , 
     var `name`: kotlin.String
     , 
@@ -1553,7 +1487,7 @@ data class CategorySummary (
 public object FfiConverterTypeCategorySummary: FfiConverterRustBuffer<CategorySummary> {
     override fun read(buf: ByteBuffer): CategorySummary {
         return CategorySummary(
-            FfiConverterTypeUuid.read(buf),
+            FfiConverterString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterUInt.read(buf),
@@ -1561,138 +1495,18 @@ public object FfiConverterTypeCategorySummary: FfiConverterRustBuffer<CategorySu
     }
 
     override fun allocationSize(value: CategorySummary) = (
-            FfiConverterTypeUuid.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`id`) +
             FfiConverterString.allocationSize(value.`name`) +
             FfiConverterString.allocationSize(value.`colorHex`) +
             FfiConverterUInt.allocationSize(value.`productCount`)
     )
 
     override fun write(value: CategorySummary, buf: ByteBuffer) {
-            FfiConverterTypeUuid.write(value.`id`, buf)
+            FfiConverterString.write(value.`id`, buf)
             FfiConverterString.write(value.`name`, buf)
             FfiConverterString.write(value.`colorHex`, buf)
             FfiConverterUInt.write(value.`productCount`, buf)
     }
-}
-
-
-
-data class Product (
-    var `id`: Uuid
-    , 
-    var `name`: kotlin.String
-    , 
-    var `state`: ProductState
-    , 
-    var `oneTimePurchase`: kotlin.Boolean
-    , 
-    var `category`: Category?
-    , 
-    var `lastPurchasedTimestamp`: java.time.Instant?
-    
-){
-    
-
-    
-
-    
-    companion object
-}
-
-/**
- * @suppress
- */
-public object FfiConverterTypeProduct: FfiConverterRustBuffer<Product> {
-    override fun read(buf: ByteBuffer): Product {
-        return Product(
-            FfiConverterTypeUuid.read(buf),
-            FfiConverterString.read(buf),
-            FfiConverterTypeProductState.read(buf),
-            FfiConverterBoolean.read(buf),
-            FfiConverterOptionalTypeCategory.read(buf),
-            FfiConverterOptionalTimestamp.read(buf),
-        )
-    }
-
-    override fun allocationSize(value: Product) = (
-            FfiConverterTypeUuid.allocationSize(value.`id`) +
-            FfiConverterString.allocationSize(value.`name`) +
-            FfiConverterTypeProductState.allocationSize(value.`state`) +
-            FfiConverterBoolean.allocationSize(value.`oneTimePurchase`) +
-            FfiConverterOptionalTypeCategory.allocationSize(value.`category`) +
-            FfiConverterOptionalTimestamp.allocationSize(value.`lastPurchasedTimestamp`)
-    )
-
-    override fun write(value: Product, buf: ByteBuffer) {
-            FfiConverterTypeUuid.write(value.`id`, buf)
-            FfiConverterString.write(value.`name`, buf)
-            FfiConverterTypeProductState.write(value.`state`, buf)
-            FfiConverterBoolean.write(value.`oneTimePurchase`, buf)
-            FfiConverterOptionalTypeCategory.write(value.`category`, buf)
-            FfiConverterOptionalTimestamp.write(value.`lastPurchasedTimestamp`, buf)
-    }
-}
-
-
-
-
-
-sealed class CategoryException: kotlin.Exception() {
-    
-    class DatabaseException(
-        
-        val `errorMessage`: kotlin.String
-        ) : CategoryException() {
-        override val message
-            get() = "errorMessage=${ `errorMessage` }"
-    }
-    
-
-    
-
-
-    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<CategoryException> {
-        override fun lift(error_buf: RustBuffer.ByValue): CategoryException = FfiConverterTypeCategoryError.lift(error_buf)
-    }
-
-    
-}
-
-/**
- * @suppress
- */
-public object FfiConverterTypeCategoryError : FfiConverterRustBuffer<CategoryException> {
-    override fun read(buf: ByteBuffer): CategoryException {
-        
-
-        return when(buf.getInt()) {
-            1 -> CategoryException.DatabaseException(
-                FfiConverterString.read(buf),
-                )
-            else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
-        }
-    }
-
-    override fun allocationSize(value: CategoryException): ULong {
-        return when(value) {
-            is CategoryException.DatabaseException -> (
-                // Add the size for the Int that specifies the variant plus the size needed for all fields
-                4UL
-                + FfiConverterString.allocationSize(value.`errorMessage`)
-            )
-        }
-    }
-
-    override fun write(value: CategoryException, buf: ByteBuffer) {
-        when(value) {
-            is CategoryException.DatabaseException -> {
-                buf.putInt(1)
-                FfiConverterString.write(value.`errorMessage`, buf)
-                Unit
-            }
-        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
-    }
-
 }
 
 
@@ -1735,30 +1549,28 @@ public object FfiConverterTypeCategorySort: FfiConverterRustBuffer<CategorySort>
 
 
 
-sealed class InitException: kotlin.Exception() {
+sealed class CoreException: kotlin.Exception() {
     
-    class DatabaseOpenFailed(
+    class Database(
         
         val `errorMessage`: kotlin.String
-        ) : InitException() {
+        ) : CoreException() {
         override val message
             get() = "errorMessage=${ `errorMessage` }"
     }
     
-    class MigrationFailed(
-        
-        val `errorMessage`: kotlin.String
-        ) : InitException() {
+    class NotFound(
+        ) : CoreException() {
         override val message
-            get() = "errorMessage=${ `errorMessage` }"
+            get() = ""
     }
     
 
     
 
 
-    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<InitException> {
-        override fun lift(error_buf: RustBuffer.ByValue): InitException = FfiConverterTypeInitError.lift(error_buf)
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<CoreException> {
+        override fun lift(error_buf: RustBuffer.ByValue): CoreException = FfiConverterTypeCoreError.lift(error_buf)
     }
 
     
@@ -1767,87 +1579,48 @@ sealed class InitException: kotlin.Exception() {
 /**
  * @suppress
  */
-public object FfiConverterTypeInitError : FfiConverterRustBuffer<InitException> {
-    override fun read(buf: ByteBuffer): InitException {
+public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> {
+    override fun read(buf: ByteBuffer): CoreException {
         
 
         return when(buf.getInt()) {
-            1 -> InitException.DatabaseOpenFailed(
+            1 -> CoreException.Database(
                 FfiConverterString.read(buf),
                 )
-            2 -> InitException.MigrationFailed(
-                FfiConverterString.read(buf),
-                )
+            2 -> CoreException.NotFound()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
 
-    override fun allocationSize(value: InitException): ULong {
+    override fun allocationSize(value: CoreException): ULong {
         return when(value) {
-            is InitException.DatabaseOpenFailed -> (
+            is CoreException.Database -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
                 + FfiConverterString.allocationSize(value.`errorMessage`)
             )
-            is InitException.MigrationFailed -> (
+            is CoreException.NotFound -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
-                + FfiConverterString.allocationSize(value.`errorMessage`)
             )
         }
     }
 
-    override fun write(value: InitException, buf: ByteBuffer) {
+    override fun write(value: CoreException, buf: ByteBuffer) {
         when(value) {
-            is InitException.DatabaseOpenFailed -> {
+            is CoreException.Database -> {
                 buf.putInt(1)
                 FfiConverterString.write(value.`errorMessage`, buf)
                 Unit
             }
-            is InitException.MigrationFailed -> {
+            is CoreException.NotFound -> {
                 buf.putInt(2)
-                FfiConverterString.write(value.`errorMessage`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 
 }
-
-
-
-
-enum class ProductState {
-    
-    ARCHIVED,
-    LISTED,
-    UNLISTED;
-
-    
-
-
-    companion object
-}
-
-
-/**
- * @suppress
- */
-public object FfiConverterTypeProductState: FfiConverterRustBuffer<ProductState> {
-    override fun read(buf: ByteBuffer) = try {
-        ProductState.values()[buf.getInt() - 1]
-    } catch (e: IndexOutOfBoundsException) {
-        throw RuntimeException("invalid enum value, something is very wrong!!", e)
-    }
-
-    override fun allocationSize(value: ProductState) = 4UL
-
-    override fun write(value: ProductState, buf: ByteBuffer) {
-        buf.putInt(value.ordinal + 1)
-    }
-}
-
-
 
 
 
@@ -1877,70 +1650,6 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
         } else {
             buf.put(1)
             FfiConverterString.write(value, buf)
-        }
-    }
-}
-
-
-
-
-/**
- * @suppress
- */
-public object FfiConverterOptionalTimestamp: FfiConverterRustBuffer<java.time.Instant?> {
-    override fun read(buf: ByteBuffer): java.time.Instant? {
-        if (buf.get().toInt() == 0) {
-            return null
-        }
-        return FfiConverterTimestamp.read(buf)
-    }
-
-    override fun allocationSize(value: java.time.Instant?): ULong {
-        if (value == null) {
-            return 1UL
-        } else {
-            return 1UL + FfiConverterTimestamp.allocationSize(value)
-        }
-    }
-
-    override fun write(value: java.time.Instant?, buf: ByteBuffer) {
-        if (value == null) {
-            buf.put(0)
-        } else {
-            buf.put(1)
-            FfiConverterTimestamp.write(value, buf)
-        }
-    }
-}
-
-
-
-
-/**
- * @suppress
- */
-public object FfiConverterOptionalTypeCategory: FfiConverterRustBuffer<Category?> {
-    override fun read(buf: ByteBuffer): Category? {
-        if (buf.get().toInt() == 0) {
-            return null
-        }
-        return FfiConverterTypeCategory.read(buf)
-    }
-
-    override fun allocationSize(value: Category?): ULong {
-        if (value == null) {
-            return 1UL
-        } else {
-            return 1UL + FfiConverterTypeCategory.allocationSize(value)
-        }
-    }
-
-    override fun write(value: Category?, buf: ByteBuffer) {
-        if (value == null) {
-            buf.put(0)
-        } else {
-            buf.put(1)
-            FfiConverterTypeCategory.write(value, buf)
         }
     }
 }
@@ -2032,9 +1741,4 @@ public object FfiConverterSequenceTypeCategorySummary: FfiConverterRustBuffer<Li
         }
     }
 }
-
-
-
-public typealias Uuid = kotlin.String
-public typealias FfiConverterTypeUuid = FfiConverterString
 
