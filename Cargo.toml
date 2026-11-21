@@ -1,3 +1,3 @@
 [workspace]
-members = ["core"]
+members = ["core", "uniffi-bindgen"]
 resolver = "2"

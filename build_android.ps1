@@ -15,7 +15,7 @@ try {
     Invoke-Native { cargo build --lib }
 
     Write-Host "Generating Kotlin bindings..." -ForegroundColor Cyan
-    Invoke-Native { cargo run --bin uniffi_bindgen generate --library "$PSScriptRoot\target\debug\compras_core.dll" --language kotlin --out-dir $KotlinSrc }
+    Invoke-Native { cargo run -p uniffi-bindgen generate --library "$PSScriptRoot\target\debug\compras_core.dll" --language kotlin --out-dir $KotlinSrc }
 
     Write-Host "Cross-compiling core for Android..." -ForegroundColor Cyan
     New-Item -ItemType Directory -Force $JniLibs | Out-Null

@@ -7,12 +7,8 @@ edition = "2021"
 crate-type = ["cdylib"]
 name = "compras_core"
 
-[[bin]]
-name = "uniffi_bindgen"
-path = "src/bin/uniffi_bindgen.rs"
-
 [dependencies]
-uniffi = { version = "0.31", features = ["cli"] }
+uniffi = "0.32"
 rusqlite = { version = "0.40", features = ["bundled", "uuid"] }
 thiserror = "2.0"
 uuid = { version = "1.23", features = ["v4"] }
