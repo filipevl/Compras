@@ -683,6 +683,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_compras_core_checksum_method_comprascore_get_categories(
     ): Int
+    external fun uniffi_compras_core_checksum_method_comprascore_reorder_categories(
+    ): Int
     external fun uniffi_compras_core_checksum_method_comprascore_update_category(
     ): Int
     external fun uniffi_compras_core_checksum_constructor_comprascore_init(
@@ -719,6 +721,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_compras_core_fn_method_comprascore_get_categories(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_compras_core_fn_method_comprascore_reorder_categories(`ptr`: Long,`ids`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_compras_core_fn_method_comprascore_update_category(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`colorHex`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun ffi_compras_core_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -847,6 +851,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_compras_core_checksum_method_comprascore_get_categories() and 0xFFFF) != 50681) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_compras_core_checksum_method_comprascore_reorder_categories() and 0xFFFF) != 16475) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_compras_core_checksum_method_comprascore_update_category() and 0xFFFF) != 3262) {
@@ -1179,6 +1186,8 @@ public interface ComprasCoreInterface {
      */
     fun `getCategories`(): List<Category>
     
+    fun `reorderCategories`(`ids`: List<kotlin.String>)
+    
     fun `updateCategory`(`id`: kotlin.String, `name`: kotlin.String, `colorHex`: kotlin.String): Category
     
     companion object
@@ -1333,6 +1342,20 @@ open class ComprasCore: Disposable, AutoCloseable, ComprasCoreInterface
     }
     )
     }
+    
+
+    
+    @Throws(CoreException::class)override fun `reorderCategories`(`ids`: List<kotlin.String>)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_compras_core_fn_method_comprascore_reorder_categories(
+        it,
+        
+        FfiConverterSequenceString.lower(`ids`),_status)
+}
+    }
+    
     
 
     
@@ -1519,6 +1542,34 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.String>> {
+    override fun read(buf: ByteBuffer): List<kotlin.String> {
+        val len = buf.getInt()
+        return List<kotlin.String>(len) {
+            FfiConverterString.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.String>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterString.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.String>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterString.write(it, buf)
+        }
+    }
 }
 
 

@@ -101,6 +101,29 @@ impl ComprasCore {
 
         Ok(())
     }
+
+    pub fn reorder_categories(&self, ids: Vec<String>) -> Result<(), CoreError> {
+        let mut conn = self.db();
+        let tx = conn.transaction()?;
+        let timestamp = now();
+
+        for (index, id) in ids.iter().enumerate() {
+            let changed = tx.execute(
+                "UPDATE categories
+                SET position = ?1, updated_at = ?2
+                WHERE id = ?3 AND deleted_at IS NULL",
+                rusqlite::params![index as i64 + 1, timestamp, id],
+            )?;
+
+            if changed == 0 {
+                return Err(CoreError::NotFound); // `tx` is dropped without commit: rolled back
+            }
+        }
+
+        tx.commit()?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -116,6 +139,14 @@ mod tests {
         let bakery = core.add_category("Bakery".into(), "#C08040".into()).unwrap();
 
         (core, bakery)
+    }
+
+    fn names(core: &ComprasCore) -> Vec<String> {
+        core.get_categories()
+            .unwrap()
+            .into_iter()
+            .map(|category| category.name)
+            .collect()
     }
 
     #[test]
@@ -136,12 +167,7 @@ mod tests {
         core.add_category("Frozen".into(), "#C08041".into()).unwrap();
         core.add_category("Drinks".into(), "#C08042".into()).unwrap();
 
-        let names: Vec<String> = core
-            .get_categories()
-            .unwrap()
-            .into_iter()
-            .map(|category| category.name)
-            .collect();
+        let names = names(&core);
 
         assert_eq!(names, ["Bakery", "Frozen", "Drinks"]);
     }
@@ -193,5 +219,30 @@ mod tests {
 
         assert!(core.get_categories().unwrap().is_empty());
         assert_eq!(rows, 1, "a soft delete keeps the row");
+    }
+
+    #[test]
+    fn reorder_sets_the_new_store_order() {
+        let (core, bakery) = core_with_bakery();
+        let frozen = core.add_category("Frozen".into(), "#C08041".into()).unwrap();
+        let drinks = core.add_category("Drinks".into(), "#C08042".into()).unwrap();
+
+        core.reorder_categories(vec![drinks.id, bakery.id, frozen.id]).unwrap();
+
+        let names = names(&core);
+
+        assert_eq!(names, ["Drinks", "Bakery", "Frozen"]);
+    }
+
+    #[test]
+    fn reorder_with_an_unknown_id_changes_nothing() {
+        let (core, bakery) = core_with_bakery();
+        let frozen = core.add_category("Frozen".into(), "#C08041".into()).unwrap();
+
+        let reorder = core.reorder_categories(vec![frozen.id, "nope".into(), bakery.id]);
+        let names = names(&core);
+
+        assert!(matches!(reorder, Err(CoreError::NotFound)));
+        assert_eq!(names, ["Bakery", "Frozen"], "rolled back");
     }
 }
