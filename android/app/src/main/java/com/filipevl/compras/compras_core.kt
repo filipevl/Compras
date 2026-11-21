@@ -797,16 +797,16 @@ private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
 }
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
-    if (lib.uniffi_compras_core_checksum_method_comprascore_delete_category() != 31379.toShort()) {
+    if (lib.uniffi_compras_core_checksum_method_comprascore_delete_category() != 18631.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_compras_core_checksum_method_comprascore_get_categories() != 7937.toShort()) {
+    if (lib.uniffi_compras_core_checksum_method_comprascore_get_categories() != 21769.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_compras_core_checksum_method_comprascore_get_categories_summary() != 31736.toShort()) {
+    if (lib.uniffi_compras_core_checksum_method_comprascore_get_categories_summary() != 43444.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_compras_core_checksum_method_comprascore_update_category() != 6676.toShort()) {
+    if (lib.uniffi_compras_core_checksum_method_comprascore_update_category() != 15018.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_compras_core_checksum_constructor_comprascore_init() != 64350.toShort()) {
@@ -989,6 +989,29 @@ public object FfiConverterUInt: FfiConverter<UInt, Int> {
 
     override fun write(value: UInt, buf: ByteBuffer) {
         buf.putInt(value.toInt())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterBoolean: FfiConverter<Boolean, Byte> {
+    override fun lift(value: Byte): Boolean {
+        return value.toInt() != 0
+    }
+
+    override fun read(buf: ByteBuffer): Boolean {
+        return lift(buf.get())
+    }
+
+    override fun lower(value: Boolean): Byte {
+        return if (value) 1.toByte() else 0.toByte()
+    }
+
+    override fun allocationSize(value: Boolean) = 1UL
+
+    override fun write(value: Boolean, buf: ByteBuffer) {
+        buf.put(lower(value))
     }
 }
 
@@ -1504,7 +1527,9 @@ data class Product (
     , 
     var `name`: kotlin.String
     , 
-    var `quantity`: Quantity
+    var `state`: ProductState
+    , 
+    var `oneTimePurchase`: kotlin.Boolean
     , 
     var `category`: Category?
     , 
@@ -1527,7 +1552,8 @@ public object FfiConverterTypeProduct: FfiConverterRustBuffer<Product> {
         return Product(
             FfiConverterTypeUuid.read(buf),
             FfiConverterString.read(buf),
-            FfiConverterTypeQuantity.read(buf),
+            FfiConverterTypeProductState.read(buf),
+            FfiConverterBoolean.read(buf),
             FfiConverterOptionalTypeCategory.read(buf),
             FfiConverterOptionalTimestamp.read(buf),
         )
@@ -1536,7 +1562,8 @@ public object FfiConverterTypeProduct: FfiConverterRustBuffer<Product> {
     override fun allocationSize(value: Product) = (
             FfiConverterTypeUuid.allocationSize(value.`id`) +
             FfiConverterString.allocationSize(value.`name`) +
-            FfiConverterTypeQuantity.allocationSize(value.`quantity`) +
+            FfiConverterTypeProductState.allocationSize(value.`state`) +
+            FfiConverterBoolean.allocationSize(value.`oneTimePurchase`) +
             FfiConverterOptionalTypeCategory.allocationSize(value.`category`) +
             FfiConverterOptionalTimestamp.allocationSize(value.`lastPurchasedTimestamp`)
     )
@@ -1544,7 +1571,8 @@ public object FfiConverterTypeProduct: FfiConverterRustBuffer<Product> {
     override fun write(value: Product, buf: ByteBuffer) {
             FfiConverterTypeUuid.write(value.`id`, buf)
             FfiConverterString.write(value.`name`, buf)
-            FfiConverterTypeQuantity.write(value.`quantity`, buf)
+            FfiConverterTypeProductState.write(value.`state`, buf)
+            FfiConverterBoolean.write(value.`oneTimePurchase`, buf)
             FfiConverterOptionalTypeCategory.write(value.`category`, buf)
             FfiConverterOptionalTimestamp.write(value.`lastPurchasedTimestamp`, buf)
     }
@@ -1558,10 +1586,10 @@ sealed class CategoryException: kotlin.Exception() {
     
     class DatabaseException(
         
-        val `message`: kotlin.String
+        val `errorMessage`: kotlin.String
         ) : CategoryException() {
         override val message
-            get() = "message=${ `message` }"
+            get() = "errorMessage=${ `errorMessage` }"
     }
     
 
@@ -1595,7 +1623,7 @@ public object FfiConverterTypeCategoryError : FfiConverterRustBuffer<CategoryExc
             is CategoryException.DatabaseException -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
-                + FfiConverterString.allocationSize(value.`message`)
+                + FfiConverterString.allocationSize(value.`errorMessage`)
             )
         }
     }
@@ -1604,7 +1632,7 @@ public object FfiConverterTypeCategoryError : FfiConverterRustBuffer<CategoryExc
         when(value) {
             is CategoryException.DatabaseException -> {
                 buf.putInt(1)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`errorMessage`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -1656,18 +1684,18 @@ sealed class InitException: kotlin.Exception() {
     
     class DatabaseOpenFailed(
         
-        val `message`: kotlin.String
+        val `errorMessage`: kotlin.String
         ) : InitException() {
         override val message
-            get() = "message=${ `message` }"
+            get() = "errorMessage=${ `errorMessage` }"
     }
     
     class MigrationFailed(
         
-        val `message`: kotlin.String
+        val `errorMessage`: kotlin.String
         ) : InitException() {
         override val message
-            get() = "message=${ `message` }"
+            get() = "errorMessage=${ `errorMessage` }"
     }
     
 
@@ -1704,12 +1732,12 @@ public object FfiConverterTypeInitError : FfiConverterRustBuffer<InitException> 
             is InitException.DatabaseOpenFailed -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
-                + FfiConverterString.allocationSize(value.`message`)
+                + FfiConverterString.allocationSize(value.`errorMessage`)
             )
             is InitException.MigrationFailed -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
-                + FfiConverterString.allocationSize(value.`message`)
+                + FfiConverterString.allocationSize(value.`errorMessage`)
             )
         }
     }
@@ -1718,12 +1746,12 @@ public object FfiConverterTypeInitError : FfiConverterRustBuffer<InitException> 
         when(value) {
             is InitException.DatabaseOpenFailed -> {
                 buf.putInt(1)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`errorMessage`, buf)
                 Unit
             }
             is InitException.MigrationFailed -> {
                 buf.putInt(2)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`errorMessage`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -1734,10 +1762,11 @@ public object FfiConverterTypeInitError : FfiConverterRustBuffer<InitException> 
 
 
 
-enum class Quantity {
+enum class ProductState {
     
-    STOCKED,
-    NEED;
+    ARCHIVED,
+    LISTED,
+    UNLISTED;
 
     
 
@@ -1749,16 +1778,16 @@ enum class Quantity {
 /**
  * @suppress
  */
-public object FfiConverterTypeQuantity: FfiConverterRustBuffer<Quantity> {
+public object FfiConverterTypeProductState: FfiConverterRustBuffer<ProductState> {
     override fun read(buf: ByteBuffer) = try {
-        Quantity.values()[buf.getInt() - 1]
+        ProductState.values()[buf.getInt() - 1]
     } catch (e: IndexOutOfBoundsException) {
         throw RuntimeException("invalid enum value, something is very wrong!!", e)
     }
 
-    override fun allocationSize(value: Quantity) = 4UL
+    override fun allocationSize(value: ProductState) = 4UL
 
-    override fun write(value: Quantity, buf: ByteBuffer) {
+    override fun write(value: ProductState, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
     }
 }

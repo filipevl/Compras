@@ -3,7 +3,7 @@ uniffi::setup_scaffolding!();
 mod category;
 mod shared;
 mod product;
-mod quantity;
+mod product_state;
 mod actions;
 
 use crate::shared::InitError;
@@ -29,18 +29,18 @@ impl ComprasCore {
     #[uniffi::constructor]
     pub fn init(db_path: String) -> Result<Arc<Self>, InitError> {
         let mut conn = Connection::open(&db_path).map_err(|e| InitError::DatabaseOpenFailed {
-            message: e.to_string(),
+            error_message: e.to_string(),
         })?;
 
         // SQLite has foreign keys disabled by default, and the setting is on a connection level.
         conn.execute("PRAGMA foreign_keys = ON;", []).map_err(|e| {
             InitError::DatabaseOpenFailed {
-                message: e.to_string(),
+                error_message: e.to_string(),
             }
         })?;
 
         Self::run_migrations(&mut conn).map_err(|e| InitError::MigrationFailed {
-            message: e.to_string(),
+            error_message: e.to_string(),
         })?;
 
         Ok(Arc::new(Self {

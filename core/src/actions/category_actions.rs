@@ -7,23 +7,23 @@ use uuid::Uuid;
 impl ComprasCore {
     pub fn get_categories(&self) -> Result<Vec<Category>, CategoryError> {
         let conn = self.db.lock().map_err(|e| CategoryError::DatabaseError {
-            message: format!("Failed to get database lock: {}", e),
+            error_message: format!("Failed to get database lock: {}", e),
         })?;
 
         let mut statement = conn
             .prepare("SELECT id, name, color_hex FROM categories ORDER BY name ASC")
             .map_err(|e| CategoryError::DatabaseError {
-                message: e.to_string(),
+                error_message: e.to_string(),
             })?;
 
         let categories = statement
             .query_map([], Category::from_row)
             .map_err(|e| CategoryError::DatabaseError {
-                message: e.to_string(),
+                error_message: e.to_string(),
             })?
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| CategoryError::DatabaseError {
-                message: e.to_string(),
+                error_message: e.to_string(),
             })?;
 
         Ok(categories)
@@ -35,7 +35,7 @@ impl ComprasCore {
         filter: Option<String>,
     ) -> Result<Vec<CategorySummary>, CategoryError> {
         let conn = self.db.lock().map_err(|e| CategoryError::DatabaseError {
-            message: format!("Failed to get database lock: {}", e),
+            error_message: format!("Failed to get database lock: {}", e),
         })?;
 
         let sort_clause = match sort.unwrap_or(CategorySort::NameAsc) {
@@ -66,7 +66,7 @@ impl ComprasCore {
         let mut statement = conn
             .prepare(&query)
             .map_err(|e| CategoryError::DatabaseError {
-                message: format!("Failed to prepare query: {}", e),
+                error_message: format!("Failed to prepare query: {}", e),
             })?;
 
         let params: &[&dyn rusqlite::ToSql] = match &filter {
@@ -77,11 +77,11 @@ impl ComprasCore {
         let categories: Vec<CategorySummary> = statement
             .query_map(params, CategorySummary::from_row)
             .map_err(|e| CategoryError::DatabaseError {
-                message: format!("Failed to execute query: {}", e),
+                error_message: format!("Failed to execute query: {}", e),
             })?
             .collect::<Result<Vec<CategorySummary>, _>>()
             .map_err(|e| CategoryError::DatabaseError {
-                message: format!("Failed to collect results: {}", e),
+                error_message: format!("Failed to collect results: {}", e),
             })?;
 
         Ok(categories)
@@ -94,7 +94,7 @@ impl ComprasCore {
         color_hex: String,
     ) -> Result<Category, CategoryError> {
         let conn = self.db.lock().map_err(|e| CategoryError::DatabaseError {
-            message: format!("Failed to get database lock: {}", e),
+            error_message: format!("Failed to get database lock: {}", e),
         })?;
 
         conn.execute(
@@ -102,7 +102,7 @@ impl ComprasCore {
             rusqlite::params![name, color_hex, id.to_string()],
         )
         .map_err(|e| CategoryError::DatabaseError {
-            message: e.to_string(),
+            error_message: e.to_string(),
         })?;
 
         Ok(Category {
@@ -115,7 +115,7 @@ impl ComprasCore {
     /// Associated products are automatically detached (category set to null) due to foreign key constraints
     pub fn delete_category(&self, id: Uuid) -> Result<(), CategoryError> {
         let conn = self.db.lock().map_err(|e| CategoryError::DatabaseError {
-            message: format!("Failed to get database lock: {}", e),
+            error_message: format!("Failed to get database lock: {}", e),
         })?;
 
         conn.execute(
@@ -123,7 +123,7 @@ impl ComprasCore {
             rusqlite::params![id.to_string()],
         )
         .map_err(|e| CategoryError::DatabaseError {
-            message: format!("Failed to delete category: {}", e),
+            error_message: format!("Failed to delete category: {}", e),
         })?;
 
         Ok(())

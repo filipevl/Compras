@@ -2,8 +2,8 @@ use uniffi::Error;
 
 #[derive(Debug, thiserror::Error, Error)]
 pub enum CategoryError {
-    #[error("Database operation failed: {message}")]
+    #[error("Database operation failed: {error_message}")]
     DatabaseError {
-        message: String
+        error_message: String
     },
 }

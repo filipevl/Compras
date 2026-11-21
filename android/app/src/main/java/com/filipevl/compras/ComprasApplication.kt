@@ -9,8 +9,7 @@ import java.io.File
 
 class ComprasApplication : Application() {
 
-    lateinit var core: ComprasCore
-        private set
+    lateinit var core: ComprasCore private set
 
     override fun onCreate() {
         super.onCreate()

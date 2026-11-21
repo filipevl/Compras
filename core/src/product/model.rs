@@ -1,5 +1,5 @@
 use crate::category::Category;
-use crate::quantity::Quantity;
+use crate::product_state::ProductState;
 use std::time::SystemTime;
 use uuid::Uuid;
 
@@ -7,7 +7,8 @@ use uuid::Uuid;
 pub struct Product {
     pub id: Uuid,
     pub name: String,
-    pub quantity: Quantity,
+    pub state: ProductState,
+    pub one_time_purchase: bool,
     pub category: Option<Category>,
     pub last_purchased_timestamp: Option<SystemTime>,
 }
@@ -17,7 +18,8 @@ impl Product {
         Ok(Product {
             id: row.get("id")?,
             name: row.get("name")?,
-            quantity: Quantity::from_str(&row.get::<_, String>("quantity")?),
+            state: ProductState::from_str(&row.get::<_, String>("product_state")?),
+            one_time_purchase: row.get("one_time_purchase")?,
             last_purchased_timestamp: row
                 .get::<_, Option<String>>("last_purchased_at")?
                 .and_then(|s| s.parse::<chrono::DateTime<chrono::Utc>>().ok())
