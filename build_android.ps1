@@ -1,60 +1,29 @@
 $ErrorActionPreference = "Stop"
 
-# Path Configurations
-$RUST_CORE_DIR = "$PSScriptRoot\core"
-$ANDROID_JNI_DIR = "$PSScriptRoot\android\app\src\main\jniLibs"
-$TARGET_KOTLIN_PATH = "$PSScriptRoot\android\app\src\main\java\com\filipevl\compras"
+# Runs a native command and stops the script if it fails.
+function Invoke-Native([scriptblock]$Command) {
+    & $Command
+    if ($LASTEXITCODE -ne 0) { throw "Failed: $Command" }
+}
 
-$env:ANDROID_NDK_HOME = "C:\Users\filip\AppData\Local\Android\Sdk\ndk\29.0.14206865"
+$JniLibs = "$PSScriptRoot\android\app\src\main\jniLibs"
+$KotlinSrc = "$PSScriptRoot\android\app\src\main\java"
 
-Write-Host "Building Core for windows host to extract bindings..." -ForegroundColor Cyan
-Push-Location $RUST_CORE_DIR
-cargo build --lib
+Push-Location "$PSScriptRoot\core"
+try {
+    Write-Host "Building core for the host (bindings are generated from it)..." -ForegroundColor Cyan
+    Invoke-Native { cargo build --lib }
 
-if ($LASTEXITCODE -ne 0) {
+    Write-Host "Generating Kotlin bindings..." -ForegroundColor Cyan
+    Invoke-Native { cargo run --bin uniffi_bindgen generate --library "$PSScriptRoot\target\debug\compras_core.dll" --language kotlin --out-dir $KotlinSrc }
+
+    Write-Host "Cross-compiling core for Android..." -ForegroundColor Cyan
+    New-Item -ItemType Directory -Force $JniLibs | Out-Null
+    Invoke-Native { cargo ndk -t aarch64-linux-android -t x86_64-linux-android -o $JniLibs build --release }
+
+}
+finally {
     Pop-Location
-    throw "Core build failed! Stopping script."
 }
-
-Write-Host "Generating kotlin bindings via UniFFI..." -ForegroundColor Cyan
-cargo run --bin uniffi_bindgen generate --library "$PSScriptRoot\target\debug\compras_core.dll" --language kotlin --out-dir "$RUST_CORE_DIR\generated-bindings"
-
-if ($LASTEXITCODE -ne 0) {
-    Pop-Location
-    throw "UniFFI binding generation failed! Stopping script."
-}
-
-Write-Host "Cross-compiling binaries for android architectures..." -ForegroundColor Cyan
-if (-not (Test-Path $ANDROID_JNI_DIR)) {
-    New-Item -ItemType Directory -Path $ANDROID_JNI_DIR | Out-Null
-}
-
-cargo ndk -t aarch64-linux-android -t x86_64-linux-android -o $ANDROID_JNI_DIR build --release
-
-if ($LASTEXITCODE -ne 0) {
-    Pop-Location
-    throw "Android cross-compilation failed! Stopping script."
-}
-Pop-Location
-
-Write-Host "Moving generated files into android project..." -ForegroundColor Cyan
-# Ensure target package directory exists
-if (-not (Test-Path $TARGET_KOTLIN_PATH)) {
-    New-Item -ItemType Directory -Path $TARGET_KOTLIN_PATH | Out-Null
-}
-
-# Recursively hunt down any Kotlin files UniFFI created inside the package structure
-$GeneratedFiles = Get-ChildItem -Path "$RUST_CORE_DIR\generated-bindings" -Filter "*.kt" -Recurse
-
-if ($GeneratedFiles) {
-    foreach ($File in $GeneratedFiles) {
-        Copy-Item $File.FullName "$TARGET_KOTLIN_PATH\"
-        Write-Host "Copied $($File.Name) to Android project." -ForegroundColor Green
-    }
-} else {
-    throw "Could not find any generated Kotlin binding files inside the temporary directory!"
-}
-
-Remove-Item -Recurse -Force "$RUST_CORE_DIR\generated-bindings"
 
 Write-Host "Done" -ForegroundColor Green
