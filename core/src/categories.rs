@@ -1,7 +1,23 @@
-use crate::category::model::Category;
 use crate::error::CoreError;
 use crate::{now, ComprasCore};
 use uuid::Uuid;
+
+#[derive(uniffi::Record, Debug, Clone)]
+pub struct Category {
+    pub id: String,
+    pub name: String,
+    pub color_hex: String,
+}
+
+impl Category {
+    pub fn from_row(row: &rusqlite::Row) -> rusqlite::Result<Self> {
+        Ok(Self {
+            id: row.get("id")?,
+            name: row.get("name")?,
+            color_hex: row.get("color_hex")?,
+        })
+    }
+}
 
 #[uniffi::export]
 impl ComprasCore {
@@ -92,7 +108,7 @@ mod tests {
     use crate::error::CoreError;
     use crate::ComprasCore;
     use std::sync::Arc;
-    use crate::category::model::Category;
+    use super::Category;
 
     /// A core on a fresh in-memory database, holding one category: "Bakery".
     fn core_with_bakery() -> (Arc<ComprasCore>, Category) {

@@ -1,8 +1,7 @@
 uniffi::setup_scaffolding!();
 
-mod actions;
-mod category;
 mod error;
+pub mod categories;
 
 use crate::error::CoreError;
 use rusqlite::Connection;

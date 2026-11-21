@@ -840,16 +840,16 @@ private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
 }
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
-    if ((lib.uniffi_compras_core_checksum_method_comprascore_add_category() and 0xFFFF) != 24133) {
+    if ((lib.uniffi_compras_core_checksum_method_comprascore_add_category() and 0xFFFF) != 57618) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_compras_core_checksum_method_comprascore_delete_category() and 0xFFFF) != 13337) {
+    if ((lib.uniffi_compras_core_checksum_method_comprascore_delete_category() and 0xFFFF) != 36396) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_compras_core_checksum_method_comprascore_get_categories() and 0xFFFF) != 22433) {
+    if ((lib.uniffi_compras_core_checksum_method_comprascore_get_categories() and 0xFFFF) != 50681) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_compras_core_checksum_method_comprascore_update_category() and 0xFFFF) != 60153) {
+    if ((lib.uniffi_compras_core_checksum_method_comprascore_update_category() and 0xFFFF) != 3262) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_compras_core_checksum_constructor_comprascore_init() and 0xFFFF) != 7939) {
