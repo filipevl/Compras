@@ -4,3 +4,6 @@ core/.idea
 
 # Root
 .idea
+
+# Android
+android/app/src/main/jniLibs/
