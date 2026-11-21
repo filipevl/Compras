@@ -69,7 +69,6 @@ impl ComprasCore {
     }
 
     /// Soft delete: the row stays marked with `deleted_at`.
-    /// Associated products are automatically detached (category set to null) due to foreign key constraints.
     pub fn delete_category(&self, id: String) -> Result<(), CoreError> {
         let conn = self.db();
 

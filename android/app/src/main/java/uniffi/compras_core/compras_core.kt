@@ -677,11 +677,11 @@ internal object IntegrityCheckingUniffiLib {
     }
 
     internal fun ensureInitialized() = Unit
+    external fun uniffi_compras_core_checksum_method_comprascore_add_category(
+    ): Int
     external fun uniffi_compras_core_checksum_method_comprascore_delete_category(
     ): Int
     external fun uniffi_compras_core_checksum_method_comprascore_get_categories(
-    ): Int
-    external fun uniffi_compras_core_checksum_method_comprascore_get_categories_summary(
     ): Int
     external fun uniffi_compras_core_checksum_method_comprascore_update_category(
     ): Int
@@ -713,11 +713,11 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_compras_core_fn_constructor_comprascore_init(`dbPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
+    external fun uniffi_compras_core_fn_method_comprascore_add_category(`ptr`: Long,`name`: RustBuffer.ByValue,`colorHex`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_compras_core_fn_method_comprascore_delete_category(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_compras_core_fn_method_comprascore_get_categories(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun uniffi_compras_core_fn_method_comprascore_get_categories_summary(`ptr`: Long,`sort`: RustBuffer.ByValue,`filter`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_compras_core_fn_method_comprascore_update_category(`ptr`: Long,`id`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`colorHex`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -840,13 +840,13 @@ private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
 }
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
-    if ((lib.uniffi_compras_core_checksum_method_comprascore_delete_category() and 0xFFFF) != 26586) {
+    if ((lib.uniffi_compras_core_checksum_method_comprascore_add_category() and 0xFFFF) != 24133) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_compras_core_checksum_method_comprascore_get_categories() and 0xFFFF) != 45113) {
+    if ((lib.uniffi_compras_core_checksum_method_comprascore_delete_category() and 0xFFFF) != 13337) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_compras_core_checksum_method_comprascore_get_categories_summary() and 0xFFFF) != 17990) {
+    if ((lib.uniffi_compras_core_checksum_method_comprascore_get_categories() and 0xFFFF) != 22433) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_compras_core_checksum_method_comprascore_update_category() and 0xFFFF) != 60153) {
@@ -1015,29 +1015,6 @@ private class AndroidSystemCleanable(
 /**
  * @suppress
  */
-public object FfiConverterUInt: FfiConverter<UInt, Int> {
-    override fun lift(value: Int): UInt {
-        return value.toUInt()
-    }
-
-    override fun read(buf: ByteBuffer): UInt {
-        return lift(buf.getInt())
-    }
-
-    override fun lower(value: UInt): Int {
-        return value.toInt()
-    }
-
-    override fun allocationSize(value: UInt) = 4UL
-
-    override fun write(value: UInt, buf: ByteBuffer) {
-        buf.putInt(value.toInt())
-    }
-}
-
-/**
- * @suppress
- */
 public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
     // Note: we don't inherit from FfiConverterRustBuffer, because we use a
     // special encoding when lowering/lifting.  We can use `RustBuffer.len` to
@@ -1190,14 +1167,17 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 
 public interface ComprasCoreInterface {
     
+    fun `addCategory`(`name`: kotlin.String, `colorHex`: kotlin.String): Category
+    
     /**
-     * Associated products are automatically detached (category set to null) due to foreign key constraints
+     * Soft delete: the row stays marked with `deleted_at`.
      */
     fun `deleteCategory`(`id`: kotlin.String)
     
+    /**
+     * The categories that aren't deleted, in store order.
+     */
     fun `getCategories`(): List<Category>
-    
-    fun `getCategoriesSummary`(`sort`: CategorySort?, `filter`: kotlin.String?): List<CategorySummary>
     
     fun `updateCategory`(`id`: kotlin.String, `name`: kotlin.String, `colorHex`: kotlin.String): Category
     
@@ -1306,8 +1286,24 @@ open class ComprasCore: Disposable, AutoCloseable, ComprasCoreInterface
     }
 
     
+    @Throws(CoreException::class)override fun `addCategory`(`name`: kotlin.String, `colorHex`: kotlin.String): Category {
+            return FfiConverterTypeCategory.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CoreException) { _status ->
+    UniffiLib.uniffi_compras_core_fn_method_comprascore_add_category(
+        it,
+        
+        FfiConverterString.lower(`name`),
+        FfiConverterString.lower(`colorHex`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     /**
-     * Associated products are automatically detached (category set to null) due to foreign key constraints
+     * Soft delete: the row stays marked with `deleted_at`.
      */
     @Throws(CoreException::class)override fun `deleteCategory`(`id`: kotlin.String)
         = 
@@ -1323,6 +1319,9 @@ open class ComprasCore: Disposable, AutoCloseable, ComprasCoreInterface
     
 
     
+    /**
+     * The categories that aren't deleted, in store order.
+     */
     @Throws(CoreException::class)override fun `getCategories`(): List<Category> {
             return FfiConverterSequenceTypeCategory.lift(
     callWithHandle {
@@ -1330,22 +1329,6 @@ open class ComprasCore: Disposable, AutoCloseable, ComprasCoreInterface
     UniffiLib.uniffi_compras_core_fn_method_comprascore_get_categories(
         it,
         _status)
-}
-    }
-    )
-    }
-    
-
-    
-    @Throws(CoreException::class)override fun `getCategoriesSummary`(`sort`: CategorySort?, `filter`: kotlin.String?): List<CategorySummary> {
-            return FfiConverterSequenceTypeCategorySummary.lift(
-    callWithHandle {
-    uniffiRustCallWithError(CoreException) { _status ->
-    UniffiLib.uniffi_compras_core_fn_method_comprascore_get_categories_summary(
-        it,
-        
-        FfiConverterOptionalTypeCategorySort.lower(`sort`),
-        FfiConverterOptionalString.lower(`filter`),_status)
 }
     }
     )
@@ -1463,90 +1446,6 @@ public object FfiConverterTypeCategory: FfiConverterRustBuffer<Category> {
 
 
 
-data class CategorySummary (
-    var `id`: kotlin.String
-    , 
-    var `name`: kotlin.String
-    , 
-    var `colorHex`: kotlin.String
-    , 
-    var `productCount`: kotlin.UInt
-    
-){
-    
-
-    
-
-    
-    companion object
-}
-
-/**
- * @suppress
- */
-public object FfiConverterTypeCategorySummary: FfiConverterRustBuffer<CategorySummary> {
-    override fun read(buf: ByteBuffer): CategorySummary {
-        return CategorySummary(
-            FfiConverterString.read(buf),
-            FfiConverterString.read(buf),
-            FfiConverterString.read(buf),
-            FfiConverterUInt.read(buf),
-        )
-    }
-
-    override fun allocationSize(value: CategorySummary) = (
-            FfiConverterString.allocationSize(value.`id`) +
-            FfiConverterString.allocationSize(value.`name`) +
-            FfiConverterString.allocationSize(value.`colorHex`) +
-            FfiConverterUInt.allocationSize(value.`productCount`)
-    )
-
-    override fun write(value: CategorySummary, buf: ByteBuffer) {
-            FfiConverterString.write(value.`id`, buf)
-            FfiConverterString.write(value.`name`, buf)
-            FfiConverterString.write(value.`colorHex`, buf)
-            FfiConverterUInt.write(value.`productCount`, buf)
-    }
-}
-
-
-
-
-enum class CategorySort {
-    
-    NAME_ASC,
-    NAME_DESC,
-    PRODUCT_COUNT_ASC,
-    PRODUCT_COUNT_DESC;
-
-    
-
-
-    companion object
-}
-
-
-/**
- * @suppress
- */
-public object FfiConverterTypeCategorySort: FfiConverterRustBuffer<CategorySort> {
-    override fun read(buf: ByteBuffer) = try {
-        CategorySort.values()[buf.getInt() - 1]
-    } catch (e: IndexOutOfBoundsException) {
-        throw RuntimeException("invalid enum value, something is very wrong!!", e)
-    }
-
-    override fun allocationSize(value: CategorySort) = 4UL
-
-    override fun write(value: CategorySort, buf: ByteBuffer) {
-        buf.putInt(value.ordinal + 1)
-    }
-}
-
-
-
-
-
 
 
 sealed class CoreException: kotlin.Exception() {
@@ -1628,70 +1527,6 @@ public object FfiConverterTypeCoreError : FfiConverterRustBuffer<CoreException> 
 /**
  * @suppress
  */
-public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?> {
-    override fun read(buf: ByteBuffer): kotlin.String? {
-        if (buf.get().toInt() == 0) {
-            return null
-        }
-        return FfiConverterString.read(buf)
-    }
-
-    override fun allocationSize(value: kotlin.String?): ULong {
-        if (value == null) {
-            return 1UL
-        } else {
-            return 1UL + FfiConverterString.allocationSize(value)
-        }
-    }
-
-    override fun write(value: kotlin.String?, buf: ByteBuffer) {
-        if (value == null) {
-            buf.put(0)
-        } else {
-            buf.put(1)
-            FfiConverterString.write(value, buf)
-        }
-    }
-}
-
-
-
-
-/**
- * @suppress
- */
-public object FfiConverterOptionalTypeCategorySort: FfiConverterRustBuffer<CategorySort?> {
-    override fun read(buf: ByteBuffer): CategorySort? {
-        if (buf.get().toInt() == 0) {
-            return null
-        }
-        return FfiConverterTypeCategorySort.read(buf)
-    }
-
-    override fun allocationSize(value: CategorySort?): ULong {
-        if (value == null) {
-            return 1UL
-        } else {
-            return 1UL + FfiConverterTypeCategorySort.allocationSize(value)
-        }
-    }
-
-    override fun write(value: CategorySort?, buf: ByteBuffer) {
-        if (value == null) {
-            buf.put(0)
-        } else {
-            buf.put(1)
-            FfiConverterTypeCategorySort.write(value, buf)
-        }
-    }
-}
-
-
-
-
-/**
- * @suppress
- */
 public object FfiConverterSequenceTypeCategory: FfiConverterRustBuffer<List<Category>> {
     override fun read(buf: ByteBuffer): List<Category> {
         val len = buf.getInt()
@@ -1710,34 +1545,6 @@ public object FfiConverterSequenceTypeCategory: FfiConverterRustBuffer<List<Cate
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeCategory.write(it, buf)
-        }
-    }
-}
-
-
-
-
-/**
- * @suppress
- */
-public object FfiConverterSequenceTypeCategorySummary: FfiConverterRustBuffer<List<CategorySummary>> {
-    override fun read(buf: ByteBuffer): List<CategorySummary> {
-        val len = buf.getInt()
-        return List<CategorySummary>(len) {
-            FfiConverterTypeCategorySummary.read(buf)
-        }
-    }
-
-    override fun allocationSize(value: List<CategorySummary>): ULong {
-        val sizeForLength = 4UL
-        val sizeForItems = value.map { FfiConverterTypeCategorySummary.allocationSize(it) }.sum()
-        return sizeForLength + sizeForItems
-    }
-
-    override fun write(value: List<CategorySummary>, buf: ByteBuffer) {
-        buf.putInt(value.size)
-        value.iterator().forEach {
-            FfiConverterTypeCategorySummary.write(it, buf)
         }
     }
 }
